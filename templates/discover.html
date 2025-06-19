@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Discover - Perplexity Clone</title>
+    <link rel="stylesheet" href="/static/css/styles.css">
+</head>
+<body>
+    <nav class="sidebar">
+        <img src="/static/images/logo.png" alt="Logo" class="logo-icon">
+        <div class="nav-items">
+            <a href="/" class="nav-item">
+                <img src="/static/images/search.png" alt="Search" class="nav-icon">
+                Home
+            </a>
+            <a href="/discover" class="nav-item active">
+                <img src="/static/images/discover.png" alt="Discover" class="nav-icon">
+                Discover
+            </a>
+        </div>
+    </nav>
+
+    <div class="main-content">
+        <div class="container">
+            <div class="discover-header">
+                <h1>Discover</h1>
+                <p>Explore these fascinating topics</p>
+            </div>
+            <div class="featured-topics">
+                {% for topic in topics %}
+                <a href="/?query={{ topic }}" class="topic-card">
+                    <h3>{{ topic }}</h3>
+                    <p>Explore this topic →</p>
+                </a>
+                {% endfor %}
+            </div>
+            <div class="refresh-topics">
+                <a href="/discover" class="refresh-button">Show me different topics</a>
+            </div>
+        </div>
+    </div>
+</body>
+</html> 

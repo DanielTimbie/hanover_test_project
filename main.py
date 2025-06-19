@@ -9,6 +9,7 @@ from dotenv import load_dotenv
 import json
 from typing import List, Dict
 from pathlib import Path
+import random
 
 load_dotenv()
 
@@ -27,6 +28,15 @@ templates = Jinja2Templates(directory=str(templates_dir))
 # Configure APIs
 openai.api_key = os.getenv("OPENAI_API_KEY")
 SERPAPI_KEY = os.getenv("SERPAPI_KEY")
+
+# Topics list - importing directly from topics.js would be complex,
+# so we'll maintain it here as well
+TOPICS = [
+    "AI Ethics", "Quantum Computing", "Web3", "5G Networks", "Robotics",
+    "Cybersecurity", "Space Tech", "Green Tech", "IoT", "Cloud Computing",
+    "Black Holes", "Climate Change", "Genetics", "Neuroscience", "Renewable Energy",
+    "Marine Biology", "Astronomy", "Evolution", "Particle Physics", "Biotechnology"
+]
 
 class PerplexityClone:
     def __init__(self):
@@ -105,6 +115,15 @@ perplexity = PerplexityClone()
 @app.get("/", response_class=HTMLResponse)
 async def home(request: Request):
     return templates.TemplateResponse("index.html", {"request": request})
+
+@app.get("/discover")
+async def discover(request: Request):
+    # Get 3 random topics
+    random_topics = random.sample(TOPICS, 3)
+    return templates.TemplateResponse("discover.html", {
+        "request": request,
+        "topics": random_topics
+    })
 
 @app.post("/search")
 async def search(query: str = Form(...)):
