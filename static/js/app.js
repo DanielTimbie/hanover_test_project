@@ -8,10 +8,8 @@ document.addEventListener('DOMContentLoaded', () => {
     const answer = document.getElementById('answer');
     const sourcesList = document.getElementById('sourcesList');
 
-    searchForm.addEventListener('submit', async (e) => {
-        e.preventDefault();
-        
-        const query = queryInput.value.trim();
+    // Function to perform search
+    async function performSearch(query) {
         if (!query) return;
         
         // Show loading state
@@ -57,5 +55,20 @@ document.addEventListener('DOMContentLoaded', () => {
             searchButton.disabled = false;
             loading.style.display = 'none';
         }
+    }
+
+    // Handle form submission
+    searchForm.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const query = queryInput.value.trim();
+        await performSearch(query);
     });
+
+    // Check for query parameter on page load
+    const urlParams = new URLSearchParams(window.location.search);
+    const queryParam = urlParams.get('query');
+    if (queryParam) {
+        queryInput.value = queryParam;
+        performSearch(queryParam);
+    }
 }); 

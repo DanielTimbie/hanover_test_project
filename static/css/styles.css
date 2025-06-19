@@ -244,28 +244,73 @@ body {
 
 .topics-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
-    gap: 1rem;
-    padding: 1rem;
+    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+    gap: 1.5rem;
+    margin-bottom: 2rem;
 }
 
 .topic-card {
+    position: relative;
     background: rgba(255, 255, 255, 0.05);
-    border-radius: 12px;
+    border-radius: 16px;
     padding: 1.5rem;
-    cursor: pointer;
-    transition: all 0.2s;
+    transition: all 0.3s ease;
     border: 1px solid rgba(255, 255, 255, 0.1);
+    overflow: hidden;
 }
 
 .topic-card:hover {
-    background: rgba(255, 255, 255, 0.1);
-    transform: translateY(-2px);
+    transform: translateY(-4px);
+    background: rgba(255, 255, 255, 0.08);
+    border-color: rgba(255, 255, 255, 0.2);
 }
 
-.topic-card h3 {
-    font-size: 1.1rem;
+.topic-icon {
+    margin-bottom: 1rem;
+}
+
+.topic-icon .icon {
+    width: 40px;
+    height: 40px;
+    color: #7C3AED;
+}
+
+.topic-content h3 {
+    font-size: 1.25rem;
     font-weight: 600;
-    margin: 0;
+    margin-bottom: 0.5rem;
     color: #fff;
+}
+
+.topic-content p {
+    color: rgba(255, 255, 255, 0.7);
+    font-size: 0.9rem;
+}
+
+.topic-link {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    z-index: 1;
+}
+
+.refresh-topics {
+    text-align: center;
+    margin-top: 2rem;
+}
+
+.refresh-button {
+    display: inline-block;
+    padding: 0.75rem 1.5rem;
+    background: rgba(255, 255, 255, 0.1);
+    color: #fff;
+    text-decoration: none;
+    border-radius: 8px;
+    transition: all 0.2s ease;
+}
+
+.refresh-button:hover {
+    background: rgba(255, 255, 255, 0.15);
 } 
