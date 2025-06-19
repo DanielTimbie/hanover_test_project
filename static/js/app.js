@@ -4,11 +4,43 @@ document.addEventListener('DOMContentLoaded', () => {
     const searchButton = document.getElementById('searchButton');
     const loading = document.getElementById('loading');
     const results = document.getElementById('results');
-    const queryDisplay = document.getElementById('queryDisplay');
-    const answer = document.getElementById('answer');
-    const sourcesList = document.getElementById('sourcesList');
+    const conversationHistory = document.getElementById('conversationHistory');
+    const followupContainer = document.getElementById('followupContainer');
+    const followupForm = document.getElementById('followupForm');
+    const followupInput = document.getElementById('followupInput');
+    const followupButton = document.getElementById('followupButton');
+    const followupLoading = document.getElementById('followupLoading');
 
-    // Function to perform search
+    // Function to display a conversation message
+    function displayMessage(query, answer, sources, isFollowup = false) {
+        const messageDiv = document.createElement('div');
+        messageDiv.className = 'conversation-message';
+        if (isFollowup) {
+            messageDiv.className += ' followup-message';
+        }
+        
+        messageDiv.innerHTML = `
+            <div class="query-display">"${query}"</div>
+            <div class="answer">${answer}</div>
+            <div class="sources">
+                <h3>Sources</h3>
+                <div class="sources-list">
+                    ${sources.map((source, index) => `
+                        <div class="source-item">
+                            <div class="source-title">${source.title}</div>
+                            <div class="source-snippet">${source.snippet}</div>
+                            <a href="${source.link}" target="_blank" class="source-link">${source.link}</a>
+                        </div>
+                    `).join('')}
+                </div>
+            </div>
+        `;
+        
+        conversationHistory.appendChild(messageDiv);
+        messageDiv.scrollIntoView({ behavior: 'smooth' });
+    }
+
+    // Function to perform initial search
     async function performSearch(query) {
         if (!query) return;
         
@@ -28,23 +60,14 @@ document.addEventListener('DOMContentLoaded', () => {
             
             const data = await response.json();
             
+            // Clear previous conversation
+            conversationHistory.innerHTML = '';
+            
             // Display results
-            queryDisplay.textContent = `"${data.query}"`;
-            answer.textContent = data.answer;
+            displayMessage(data.query, data.answer, data.sources);
             
-            // Display sources
-            sourcesList.innerHTML = '';
-            data.sources.forEach((source, index) => {
-                const sourceDiv = document.createElement('div');
-                sourceDiv.className = 'source-item';
-                sourceDiv.innerHTML = `
-                    <div class="source-title">${source.title}</div>
-                    <div class="source-snippet">${source.snippet}</div>
-                    <a href="${source.link}" target="_blank" class="source-link">${source.link}</a>
-                `;
-                sourcesList.appendChild(sourceDiv);
-            });
-            
+            // Show follow-up form
+            followupContainer.style.display = 'block';
             results.style.display = 'block';
         } catch (error) {
             console.error('Error:', error);
@@ -57,11 +80,55 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
 
-    // Handle form submission
+    // Function to perform follow-up search
+    async function performFollowup(query) {
+        if (!query) return;
+        
+        // Show loading state
+        followupButton.disabled = true;
+        followupLoading.style.display = 'block';
+        
+        try {
+            const formData = new FormData();
+            formData.append('query', query);
+            
+            const response = await fetch('/followup', {
+                method: 'POST',
+                body: formData
+            });
+            
+            const data = await response.json();
+            
+            // Display follow-up results
+            displayMessage(data.query, data.answer, data.sources, true);
+            
+            // Clear follow-up input
+            followupInput.value = '';
+        } catch (error) {
+            console.error('Error:', error);
+            const errorDiv = document.createElement('div');
+            errorDiv.className = 'error';
+            errorDiv.textContent = 'An error occurred while processing your follow-up question. Please try again.';
+            conversationHistory.appendChild(errorDiv);
+        } finally {
+            // Hide loading state
+            followupButton.disabled = false;
+            followupLoading.style.display = 'none';
+        }
+    }
+
+    // Handle main search form submission
     searchForm.addEventListener('submit', async (e) => {
         e.preventDefault();
         const query = queryInput.value.trim();
         await performSearch(query);
+    });
+
+    // Handle follow-up form submission
+    followupForm.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const query = followupInput.value.trim();
+        await performFollowup(query);
     });
 
     // Check for query parameter on page load

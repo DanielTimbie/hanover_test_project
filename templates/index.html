@@ -42,11 +42,25 @@
             </div>
             
             <div class="results" id="results">
-                <div class="query-display" id="queryDisplay"></div>
-                <div class="answer" id="answer"></div>
-                <div class="sources">
-                    <h3>Sources</h3>
-                    <div id="sourcesList"></div>
+                <div class="conversation-history" id="conversationHistory"></div>
+                
+                <!-- Follow-up search form -->
+                <div class="followup-container" id="followupContainer" style="display: none;">
+                    <form class="followup-form" id="followupForm">
+                        <input 
+                            type="text" 
+                            class="followup-input" 
+                            id="followupInput" 
+                            placeholder="Ask a follow-up question..."
+                            required
+                        >
+                        <button type="submit" class="followup-button" id="followupButton">
+                            Ask
+                        </button>
+                    </form>
+                    <div class="loading" id="followupLoading" style="display: none;">
+                        Generating follow-up response...
+                    </div>
                 </div>
             </div>
         </div>

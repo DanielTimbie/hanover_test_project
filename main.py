@@ -41,6 +41,7 @@ TOPICS = [
 class PerplexityClone:
     def __init__(self):
         self.search_results = []
+        self.conversation_history = []
     
     def search_web(self, query: str) -> List[Dict]:
         """Search web using SerpAPI"""
@@ -68,7 +69,7 @@ class PerplexityClone:
             print(f"Search error: {e}")
             return []
     
-    def generate_ai_response(self, query: str, search_results: List[Dict]) -> Dict:
+    def generate_ai_response(self, query: str, search_results: List[Dict], is_followup: bool = False, conversation_history: List[Dict] = None) -> Dict:
         """Generate AI response based on search results"""
         try:
             # Format search results for AI context
@@ -78,12 +79,20 @@ class PerplexityClone:
                 context += f"   {result['snippet']}\n"
                 context += f"   Source: {result['link']}\n\n"
             
-            prompt = f"""Based on the following search results, provide a comprehensive answer to: "{query}"
+            # Add conversation history for follow-up queries
+            conversation_context = ""
+            if is_followup and conversation_history:
+                conversation_context = "\nPrevious Conversation:\n"
+                for i, msg in enumerate(conversation_history, 1):
+                    conversation_context += f"Q{i}: {msg['query']}\n"
+                    conversation_context += f"A{i}: {msg['answer']}\n\n"
+            
+            prompt = f"""Based on the following search results and conversation history, provide a comprehensive answer to: "{query}"
 
-{context}
+{conversation_context}{context}
 
 Please provide:
-1. A clear, informative answer
+1. A clear, informative answer that builds on previous context if this is a follow-up question
 2. Citations to the sources used (format as [1], [2], etc.)
 3. A brief summary of key findings
 
@@ -92,7 +101,7 @@ Answer:"""
             response = openai.ChatCompletion.create(
                 model="gpt-3.5-turbo",
                 messages=[
-                    {"role": "system", "content": "You are a helpful AI assistant that provides accurate, well-cited answers based on search results."},
+                    {"role": "system", "content": "You are a helpful AI assistant that provides accurate, well-cited answers based on search results. For follow-up questions, build upon previous context and provide more specific, detailed answers."},
                     {"role": "user", "content": prompt}
                 ],
                 max_tokens=500,
@@ -134,10 +143,51 @@ async def search(query: str = Form(...)):
     # Generate AI response
     ai_response = perplexity.generate_ai_response(query, search_results)
     
-    return {
+    # Store in conversation history
+    perplexity.conversation_history.append({
         "query": query,
         "answer": ai_response["answer"],
         "sources": ai_response["sources"]
+    })
+    
+    return {
+        "query": query,
+        "answer": ai_response["answer"],
+        "sources": ai_response["sources"],
+        "conversation_id": len(perplexity.conversation_history)
+    }
+
+@app.post("/followup")
+async def followup(query: str = Form(...)):
+    """Follow-up search endpoint that uses previous context"""
+    # Use the same search results from the last search for context
+    if perplexity.conversation_history:
+        last_search = perplexity.conversation_history[-1]
+        search_results = last_search["sources"]
+    else:
+        # If no previous search, perform a new search
+        search_results = perplexity.search_web(query)
+    
+    # Generate AI response with conversation history
+    ai_response = perplexity.generate_ai_response(
+        query, 
+        search_results, 
+        is_followup=True, 
+        conversation_history=perplexity.conversation_history
+    )
+    
+    # Store in conversation history
+    perplexity.conversation_history.append({
+        "query": query,
+        "answer": ai_response["answer"],
+        "sources": ai_response["sources"]
+    })
+    
+    return {
+        "query": query,
+        "answer": ai_response["answer"],
+        "sources": ai_response["sources"],
+        "conversation_id": len(perplexity.conversation_history)
     }
 
 if __name__ == "__main__":
