@@ -92,5 +92,3 @@ A modern search platform that combines web search with AI-powered answers, inspi
 2. Install dependencies
 3. Set up environment variables
 4. Run the application
-
-For detailed setup instructions, see the installation guide. 
