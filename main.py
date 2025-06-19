@@ -8,11 +8,21 @@ import os
 from dotenv import load_dotenv
 import json
 from typing import List, Dict
+from pathlib import Path
 
 load_dotenv()
 
+# Create the templates directory if it doesn't exist
+templates_dir = Path("templates")
+templates_dir.mkdir(exist_ok=True)
+
 app = FastAPI(title="Perplexity Clone", version="1.0.0")
-templates = Jinja2Templates(directory="templates")
+
+# Mount static files
+app.mount("/static", StaticFiles(directory="static"), name="static")
+
+# Configure templates
+templates = Jinja2Templates(directory=str(templates_dir))
 
 # Configure APIs
 openai.api_key = os.getenv("OPENAI_API_KEY")
@@ -80,7 +90,7 @@ Answer:"""
             )
             
             return {
-                "answer": response.choices[0].message.content,
+                "answer": response.choices[0].message['content'],
                 "sources": search_results
             }
         except Exception as e:
@@ -113,4 +123,4 @@ async def search(query: str = Form(...)):
 
 if __name__ == "__main__":
     import uvicorn
-    uvicorn.run(app, host="0.0.0.0", port=8000) 
+    uvicorn.run(app, host="127.0.0.1", port=8000)
