@@ -86,13 +86,30 @@ class PerplexityClone:
                 for i, msg in enumerate(conversation_history, 1):
                     conversation_context += f"Q{i}: {msg['query']}\n"
                     conversation_context += f"A{i}: {msg['answer']}\n\n"
+                
+                conversation_context += f"\nCurrent Follow-up Question: {query}\n"
             
-            prompt = f"""Based on the following search results and conversation history, provide a comprehensive answer to: "{query}"
+            if is_followup:
+                prompt = f"""Based on the following NEW search results and previous conversation history, provide a comprehensive answer to the follow-up question: "{query}"
 
-{conversation_context}{context}
+{conversation_context}
+
+NEW Search Results:
+{context}
 
 Please provide:
-1. A clear, informative answer that builds on previous context if this is a follow-up question
+1. A clear, informative answer that builds on previous context and incorporates new information from the latest search
+2. Citations to the sources used (format as [1], [2], etc.) - include both new and relevant previous sources
+3. A brief summary of how this new information relates to or expands upon the previous conversation
+
+Answer:"""
+            else:
+                prompt = f"""Based on the following search results, provide a comprehensive answer to: "{query}"
+
+{context}
+
+Please provide:
+1. A clear, informative answer
 2. Citations to the sources used (format as [1], [2], etc.)
 3. A brief summary of key findings
 
@@ -101,7 +118,7 @@ Answer:"""
             response = openai.ChatCompletion.create(
                 model="gpt-3.5-turbo",
                 messages=[
-                    {"role": "system", "content": "You are a helpful AI assistant that provides accurate, well-cited answers based on search results. For follow-up questions, build upon previous context and provide more specific, detailed answers."},
+                    {"role": "system", "content": "You are a helpful AI assistant that provides accurate, well-cited answers based on search results. For follow-up questions, build upon previous context and provide more specific, detailed answers that incorporate new information from the latest search."},
                     {"role": "user", "content": prompt}
                 ],
                 max_tokens=500,
@@ -159,22 +176,28 @@ async def search(query: str = Form(...)):
 
 @app.post("/followup")
 async def followup(query: str = Form(...)):
-    """Follow-up search endpoint that uses previous context"""
-    # Use the same search results from the last search for context
-    if perplexity.conversation_history:
-        last_search = perplexity.conversation_history[-1]
-        search_results = last_search["sources"]
-    else:
-        # If no previous search, perform a new search
+    """Follow-up search endpoint that uses previous context and performs new search"""
+    if not perplexity.conversation_history:
+        # If no previous search, perform a regular search
         search_results = perplexity.search_web(query)
-    
-    # Generate AI response with conversation history
-    ai_response = perplexity.generate_ai_response(
-        query, 
-        search_results, 
-        is_followup=True, 
-        conversation_history=perplexity.conversation_history
-    )
+        ai_response = perplexity.generate_ai_response(query, search_results)
+    else:
+        # Get the original query from the first search
+        original_query = perplexity.conversation_history[0]["query"]
+        
+        # Create a combined search query
+        combined_query = f"{original_query} {query}"
+        
+        # Perform new search with combined query
+        search_results = perplexity.search_web(combined_query)
+        
+        # Generate AI response with conversation history
+        ai_response = perplexity.generate_ai_response(
+            query, 
+            search_results, 
+            is_followup=True, 
+            conversation_history=perplexity.conversation_history
+        )
     
     # Store in conversation history
     perplexity.conversation_history.append({
