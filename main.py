@@ -43,6 +43,11 @@ class PerplexityClone:
         self.search_results = []
         self.conversation_history = []
     
+    def clear_conversation(self):
+        """Clear the conversation history"""
+        self.conversation_history = []
+        self.search_results = []
+    
     def search_web(self, query: str) -> List[Dict]:
         """Search web using SerpAPI"""
         try:
@@ -69,15 +74,113 @@ class PerplexityClone:
             print(f"Search error: {e}")
             return []
     
+    def rerank_sources(self, sources: List[Dict], query: str) -> List[Dict]:
+        """Rerank and filter sources based on the query using OpenAI."""
+        try:
+            # Format sources for the prompt
+            sources_text = "\n".join([
+                f"{i+1}. Title: {source['title']}\n   URL: {source['link']}\n   Snippet: {source['snippet']}"
+                for i, source in enumerate(sources)
+            ])
+            
+            prompt = f"""Given these search results and the user's query: "{query}", analyze the sources and decide:
+1. Which sources should be excluded based on the query (e.g., if user asks to exclude certain sites or types of content)
+2. Which remaining sources are most relevant to the query
+3. The optimal order of sources based on relevance and user preferences
+
+Search Results:
+{sources_text}
+
+Please provide your response in this JSON format:
+{{
+    "excluded_sources": [
+        {{"index": 1, "reason": "Excluded because user requested to exclude this source type"}}
+    ],
+    "included_sources": [
+        {{"index": 0, "reason": "Most relevant because..."}},
+        {{"index": 2, "reason": "Second most relevant because..."}}
+    ]
+}}
+
+Important rules:
+1. If the query mentions excluding certain sources (e.g., "exclude Quora", "no Reddit", "without social media"), you MUST exclude those sources
+2. If a source matches an exclusion criteria, it MUST go in excluded_sources
+3. Only sources that pass all filters should be in included_sources
+4. Rank remaining sources by relevance to the query
+
+Response:"""
+
+            response = openai.ChatCompletion.create(
+                model="gpt-3.5-turbo",
+                messages=[
+                    {"role": "system", "content": "You are a helpful AI that analyzes and ranks search results based on relevance and user preferences. You must return valid JSON and strictly enforce source exclusion rules."},
+                    {"role": "user", "content": prompt}
+                ],
+                max_tokens=500,
+                temperature=0.2
+            )
+            
+            try:
+                reranking = json.loads(response.choices[0].message['content'])
+                
+                # Process excluded sources first
+                excluded_indices = [item["index"] for item in reranking.get("excluded_sources", [])]
+                excluded_sources = []
+                for exclusion in reranking.get("excluded_sources", []):
+                    if exclusion["index"] < len(sources):
+                        source = sources[exclusion["index"]].copy()
+                        source["exclusion_reason"] = exclusion.get("reason", "")
+                        excluded_sources.append(source)
+                
+                # Only include sources that weren't excluded
+                included_indices = [item["index"] for item in reranking.get("included_sources", [])]
+                reranked_sources = []
+                for i, ranking_info in enumerate(reranking.get("included_sources", [])):
+                    idx = ranking_info["index"]
+                    if idx < len(sources) and idx not in excluded_indices:
+                        source = sources[idx].copy()
+                        source["ranking_reason"] = ranking_info.get("reason", "")
+                        reranked_sources.append(source)
+                
+                return {
+                    "included": reranked_sources,
+                    "excluded": excluded_sources
+                }
+                
+            except json.JSONDecodeError:
+                print("Error parsing OpenAI response as JSON")
+                return {"included": sources, "excluded": []}
+                
+        except Exception as e:
+            print(f"Reranking error: {e}")
+            return {"included": sources, "excluded": []}
+
     def generate_ai_response(self, query: str, search_results: List[Dict], is_followup: bool = False, conversation_history: List[Dict] = None) -> Dict:
         """Generate AI response based on search results"""
         try:
+            # Rerank sources for follow-up queries
+            if is_followup:
+                reranked_results = self.rerank_sources(search_results, query)
+                search_results = reranked_results["included"]
+                excluded_sources = reranked_results["excluded"]
+            else:
+                excluded_sources = []
+            
             # Format search results for AI context
             context = "Search Results:\n"
             for i, result in enumerate(search_results, 1):
                 context += f"{i}. {result['title']}\n"
                 context += f"   {result['snippet']}\n"
-                context += f"   Source: {result['link']}\n\n"
+                context += f"   Source: {result['link']}\n"
+                if "ranking_reason" in result:
+                    context += f"   Ranking: {result['ranking_reason']}\n"
+                context += "\n"
+            
+            if excluded_sources:
+                context += "\nExcluded Sources:\n"
+                for i, result in enumerate(excluded_sources, 1):
+                    context += f"{i}. {result['title']}\n"
+                    context += f"   Reason: {result['exclusion_reason']}\n\n"
             
             # Add conversation history for follow-up queries
             conversation_context = ""
@@ -90,17 +193,18 @@ class PerplexityClone:
                 conversation_context += f"\nCurrent Follow-up Question: {query}\n"
             
             if is_followup:
-                prompt = f"""Based on the following NEW search results and previous conversation history, provide a comprehensive answer to the follow-up question: "{query}"
+                prompt = f"""Based on the following NEW search results (which have been reranked based on your follow-up question) and previous conversation history, provide a comprehensive answer to the follow-up question: "{query}"
 
 {conversation_context}
 
-NEW Search Results:
+NEW Search Results (Reranked):
 {context}
 
 Please provide:
 1. A clear, informative answer that builds on previous context and incorporates new information from the latest search
 2. Citations to the sources used (format as [1], [2], etc.) - include both new and relevant previous sources
 3. A brief summary of how this new information relates to or expands upon the previous conversation
+4. If any sources were excluded, explain why they weren't relevant
 
 Answer:"""
             else:
@@ -127,13 +231,15 @@ Answer:"""
             
             return {
                 "answer": response.choices[0].message['content'],
-                "sources": search_results
+                "sources": search_results,
+                "excluded_sources": excluded_sources if is_followup else []
             }
         except Exception as e:
             print(f"AI generation error: {e}")
             return {
                 "answer": "Sorry, I couldn't generate a response at this time.",
-                "sources": search_results
+                "sources": search_results,
+                "excluded_sources": []
             }
 
 perplexity = PerplexityClone()
@@ -154,6 +260,9 @@ async def discover(request: Request):
 @app.post("/search")
 async def search(query: str = Form(...)):
     """Search endpoint that combines web search and AI response"""
+    # Clear previous conversation history for new searches
+    perplexity.clear_conversation()
+    
     # Get search results
     search_results = perplexity.search_web(query)
     

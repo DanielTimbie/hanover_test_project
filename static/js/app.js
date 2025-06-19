@@ -130,7 +130,7 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
     // Function to display a conversation message
-    function displayMessage(query, answer, sources, isFollowup = false) {
+    function displayMessage(query, answer, sources, excluded_sources = [], isFollowup = false) {
         const messageDiv = document.createElement('div');
         messageDiv.className = 'conversation-message';
         if (isFollowup) {
@@ -146,11 +146,32 @@ document.addEventListener('DOMContentLoaded', () => {
                     ${sources.map((source, index) => `
                         <div class="source-item">
                             <div class="source-title">${source.title}</div>
+                            ${source.ranking_reason ? `
+                                <div class="ranking-reason">
+                                    <span class="reason-label">Ranking:</span> ${source.ranking_reason}
+                                </div>
+                            ` : ''}
                             <div class="source-snippet">${source.snippet}</div>
                             <a href="${source.link}" target="_blank" class="source-link">${source.link}</a>
                         </div>
                     `).join('')}
                 </div>
+                ${excluded_sources.length > 0 ? `
+                    <div class="excluded-sources">
+                        <h4>Excluded Sources</h4>
+                        <div class="sources-list excluded">
+                            ${excluded_sources.map((source, index) => `
+                                <div class="source-item excluded">
+                                    <div class="source-title">${source.title}</div>
+                                    <div class="exclusion-reason">
+                                        <span class="reason-label">Excluded:</span> ${source.exclusion_reason}
+                                    </div>
+                                    <a href="${source.link}" target="_blank" class="source-link">${source.link}</a>
+                                </div>
+                            `).join('')}
+                        </div>
+                    </div>
+                ` : ''}
             </div>
         `;
         
@@ -158,9 +179,56 @@ document.addEventListener('DOMContentLoaded', () => {
         messageDiv.scrollIntoView({ behavior: 'smooth' });
     }
 
-    // Function to perform initial search
+    // Function to reset the UI state
+    function resetUIState() {
+        // Clear input fields
+        queryInput.value = '';
+        followupInput.value = '';
+        
+        // Clear conversation history
+        conversationHistory.innerHTML = '';
+        
+        // Hide results and follow-up container
+        results.style.display = 'none';
+        followupContainer.style.display = 'none';
+        
+        // Show topic suggestions
+        showTopicSuggestions();
+        
+        // Clear any active topics
+        if (currentCategory) {
+            displayTopics(currentCategory); // This will toggle off the current category
+        }
+    }
+
+    // Handle navigation back to home
+    window.addEventListener('popstate', (event) => {
+        if (window.location.pathname === '/') {
+            resetUIState();
+        }
+    });
+
+    // Handle logo click (if you have one)
+    document.querySelector('.logo-icon')?.addEventListener('click', (e) => {
+        if (e.currentTarget.closest('a')?.getAttribute('href') === '/') {
+            resetUIState();
+        }
+    });
+
+    // Handle home nav item click
+    document.querySelector('.nav-item[href="/"]')?.addEventListener('click', (e) => {
+        if (e.currentTarget.classList.contains('active')) {
+            e.preventDefault();
+            resetUIState();
+        }
+    });
+
+    // Update performSearch to use resetUIState
     async function performSearch(query) {
         if (!query) return;
+        
+        // Reset UI state for new search
+        resetUIState();
         
         // Hide topic suggestions before search
         hideTopicSuggestions();
@@ -181,11 +249,8 @@ document.addEventListener('DOMContentLoaded', () => {
             
             const data = await response.json();
             
-            // Clear previous conversation
-            conversationHistory.innerHTML = '';
-            
             // Display results
-            displayMessage(data.query, data.answer, data.sources);
+            displayMessage(data.query, data.answer, data.sources, data.excluded_sources || []);
             
             // Show follow-up form
             followupContainer.style.display = 'block';
@@ -224,7 +289,7 @@ document.addEventListener('DOMContentLoaded', () => {
             const data = await response.json();
             
             // Display follow-up results
-            displayMessage(data.query, data.answer, data.sources, true);
+            displayMessage(data.query, data.answer, data.sources, data.excluded_sources || [], true);
             
             // Clear follow-up input
             followupInput.value = '';

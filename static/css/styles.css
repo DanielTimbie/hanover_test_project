@@ -196,6 +196,8 @@ body {
     color: rgba(255, 255, 255, 0.9);
     margin-bottom: 2rem;
     white-space: pre-wrap;
+    word-wrap: break-word;
+    overflow-wrap: break-word;
 }
 
 .sources {
@@ -221,12 +223,17 @@ body {
     background: rgba(255, 255, 255, 0.05);
     border-radius: 10px;
     border-left: 4px solid #7C3AED;
+    word-wrap: break-word;
+    overflow-wrap: break-word;
+    max-width: 100%;
 }
 
 .source-title {
     font-weight: 600;
     color: #fff;
     margin-bottom: 0.5rem;
+    word-wrap: break-word;
+    overflow-wrap: break-word;
 }
 
 .source-snippet {
@@ -234,12 +241,17 @@ body {
     font-size: 0.9rem;
     line-height: 1.4;
     margin-bottom: 0.5rem;
+    word-wrap: break-word;
+    overflow-wrap: break-word;
 }
 
 .source-link {
     color: #7C3AED;
     text-decoration: none;
     font-size: 0.8rem;
+    word-break: break-all;
+    display: inline-block;
+    max-width: 100%;
 }
 
 .source-link:hover {
@@ -523,4 +535,48 @@ body {
 .suggested-topic:hover {
     background: rgba(255, 255, 255, 0.15);
     border-color: rgba(255, 255, 255, 0.3);
+}
+
+.ranking-reason {
+    color: #10B981;
+    font-size: 0.9rem;
+    margin: 0.5rem 0;
+    padding: 0.5rem;
+    background: rgba(16, 185, 129, 0.1);
+    border-radius: 6px;
+    word-wrap: break-word;
+    overflow-wrap: break-word;
+}
+
+.reason-label {
+    font-weight: 600;
+    margin-right: 0.5rem;
+}
+
+.excluded-sources {
+    margin-top: 2rem;
+    padding-top: 1rem;
+    border-top: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.excluded-sources h4 {
+    color: rgba(255, 255, 255, 0.7);
+    margin-bottom: 1rem;
+    font-size: 1rem;
+}
+
+.source-item.excluded {
+    border-left-color: #EF4444;
+    opacity: 0.8;
+}
+
+.exclusion-reason {
+    color: #EF4444;
+    font-size: 0.9rem;
+    margin: 0.5rem 0;
+    padding: 0.5rem;
+    background: rgba(239, 68, 68, 0.1);
+    border-radius: 6px;
+    word-wrap: break-word;
+    overflow-wrap: break-word;
 } 
