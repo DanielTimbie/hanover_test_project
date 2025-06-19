@@ -23,15 +23,24 @@
 
     <div class="main-content">
         <div class="container">
+            <div class="search-header">
+                <h1>What do you want to know?</h1>
+            </div>
+
             <div class="search-container">
                 <form class="search-form" id="searchForm">
-                    <input 
-                        type="text" 
-                        class="search-input" 
-                        id="queryInput" 
-                        placeholder="Ask anything..."
-                        required
-                    >
+                    <div class="search-input-wrapper">
+                        <input 
+                            type="text" 
+                            class="search-input" 
+                            id="queryInput" 
+                            placeholder="Ask anything..."
+                            required
+                        >
+                        <button type="button" class="text-button" id="shuffleButton">
+                            Shuffle
+                        </button>
+                    </div>
                     <button type="submit" class="search-button" id="searchButton">
                         Search
                     </button>
@@ -40,11 +49,17 @@
                     Searching and generating AI response...
                 </div>
             </div>
+
+            <div class="topic-suggestions">
+                <div class="topic-row">
+                    <!-- Topic buttons will be dynamically inserted here -->
+                </div>
+                <div class="suggested-topics" id="suggestedTopics"></div>
+            </div>
             
             <div class="results" id="results">
                 <div class="conversation-history" id="conversationHistory"></div>
                 
-                <!-- Follow-up search form -->
                 <div class="followup-container" id="followupContainer" style="display: none;">
                     <form class="followup-form" id="followupForm">
                         <input 
@@ -66,6 +81,7 @@
         </div>
     </div>
 
-    <script src="/static/js/app.js"></script>
+    <script src="/static/js/topics.js" type="module"></script>
+    <script src="/static/js/app.js" type="module"></script>
 </body>
 </html> 
